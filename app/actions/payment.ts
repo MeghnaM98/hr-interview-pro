@@ -23,12 +23,14 @@ export async function processMockPayment(bookingId: string, status: 'SUCCESS' | 
     });
 
     await sendBookingNotification({
+      bookingId: updated.id,
       name: updated.name,
       email: updated.email,
       phone: updated.phone,
       course: updated.course,
       scheduledAt: updated.scheduledAt ?? new Date(),
-      packageType: updated.packageType
+      packageType: updated.packageType,
+      amountPaid: updated.amountPaid
     }).catch((error) => console.error('Mock payment email failed', error));
 
     revalidatePath('/admin');

@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
-import path from 'path';
+import { promises as fs } from 'fs';
+import { getQuestionBankFallbackPath, getQuestionBankFilename, getQuestionBankStoragePath } from './paths';
 
 const {
   SMTP_HOST,
@@ -22,28 +23,110 @@ const transporter = hasSmtpConfig
     })
   : null;
 
+const QUESTION_PACKAGES = ['PDF_ONLY', 'BUNDLE'];
+const PACKAGE_LABELS: Record<string, string> = {
+  PDF_ONLY: 'Question Bank PDF',
+  MOCK_INTERVIEW: 'Mock Interview',
+  BUNDLE: 'Mock Interview + PDF Bundle'
+};
+
 interface BookingNotificationPayload {
+  bookingId?: string;
   name: string;
   email: string;
   phone: string;
   course: string;
   scheduledAt: Date;
   packageType?: string;
+  amountPaid?: number | null;
 }
 
-const pdfPath = path.resolve(process.cwd(), 'resources/hr-interview-question-bank.pdf');
-
-function getPdfAttachment(packageType?: string) {
-  if (!packageType) return [];
-  if (packageType === 'PDF_ONLY' || packageType === 'BUNDLE') {
-    return [
-      {
-        filename: 'HR-Interview-Question-Bank.pdf',
-        path: pdfPath
-      }
-    ];
+async function getPdfAttachment(packageType?: string) {
+  if (!packageType || !QUESTION_PACKAGES.includes(packageType)) {
+    return [];
   }
+
+  const candidates = [getQuestionBankStoragePath(), getQuestionBankFallbackPath()];
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return [
+        {
+          filename: getQuestionBankFilename(),
+          path: candidate,
+          contentType: 'application/pdf'
+        }
+      ];
+    } catch {
+      // continue searching
+    }
+  }
+
+  console.warn('Question bank PDF not found at expected paths:', candidates);
   return [];
+}
+
+function formatCurrency(amount?: number | null) {
+  if (!amount && amount !== 0) {
+    return 'To be updated';
+  }
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2
+  }).format(amount);
+}
+
+function buildInvoiceHtml(payload: BookingNotificationPayload) {
+  if (!payload.packageType && !payload.amountPaid) {
+    return '';
+  }
+  const packageLabel = payload.packageType ? PACKAGE_LABELS[payload.packageType] ?? payload.packageType : 'Package';
+  return `
+    <table style="margin-top:12px;border:1px solid #e2e8f0;border-radius:12px;padding:12px;font-size:14px;">
+      <tr>
+        <td style="font-weight:600;padding:4px 8px;">Booking ID</td>
+        <td style="padding:4px 8px;">${payload.bookingId ?? 'Pending'}</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;padding:4px 8px;">Package</td>
+        <td style="padding:4px 8px;">${packageLabel}</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;padding:4px 8px;">Amount</td>
+        <td style="padding:4px 8px;">${formatCurrency(payload.amountPaid)}</td>
+      </tr>
+      <tr>
+        <td style="font-weight:600;padding:4px 8px;">Status</td>
+        <td style="padding:4px 8px;">Paid</td>
+      </tr>
+    </table>
+  `;
+}
+
+function buildInvoiceText(payload: BookingNotificationPayload) {
+  if (!payload.packageType && !payload.amountPaid) {
+    return '';
+  }
+  const packageLabel = payload.packageType ? PACKAGE_LABELS[payload.packageType] ?? payload.packageType : 'Package';
+  return [
+    '',
+    'Invoice Summary',
+    `  Booking ID: ${payload.bookingId ?? 'Pending'}`,
+    `  Package: ${packageLabel}`,
+    `  Amount: ${formatCurrency(payload.amountPaid)}`,
+    '  Status: Paid'
+  ].join('\n');
+}
+
+function buildFulfilmentMessage(payload: BookingNotificationPayload) {
+  if (payload.packageType === 'PDF_ONLY') {
+    return 'Attached is your Question Bank PDF. You can start preparing right away!';
+  }
+  if (payload.packageType === 'BUNDLE') {
+    return 'Your mock interview slot is confirmed and the Question Bank PDF is attached for preparation. Meeting link updates will follow once assigned.';
+  }
+  return 'Your mock interview slot is confirmed. We will share the Google Meet/Zoom link shortly after the coaching team finalises it.';
 }
 
 export async function sendBookingNotification(payload: BookingNotificationPayload) {
@@ -64,22 +147,44 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
     timeStyle: 'short'
   });
 
-  const textBody = `New HR Interview booking\n\nName: ${payload.name}\nCourse: ${payload.course}\nPhone: ${payload.phone}\nEmail: ${payload.email}\nScheduled: ${formattedDate}`;
+  const textBody = [
+    `Hi ${payload.name},`,
+    '',
+    'Thank you for booking HR Interview Pro. Here are your booking details:',
+    `• Course / Role: ${payload.course}`,
+    `• Phone: ${payload.phone}`,
+    `• Preferred Slot: ${formattedDate}`,
+    buildInvoiceText(payload),
+    '',
+    buildFulfilmentMessage(payload),
+    '',
+    '— HR Interview Pro'
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  const attachments = await getPdfAttachment(payload.packageType);
 
   await transporter.sendMail({
     to: recipients.join(', '),
     from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
-    subject: `New HR Mock Interview Booking – ${payload.name}`,
+    subject: `Booking confirmed – ${payload.name}`,
     text: textBody,
-    attachments: getPdfAttachment(payload.packageType),
+    attachments,
     html: `
-      <h2>New Booking</h2>
-      <p><strong>Name:</strong> ${payload.name}</p>
-      <p><strong>Email:</strong> ${payload.email}</p>
-      <p><strong>Phone:</strong> ${payload.phone}</p>
-      <p><strong>Course:</strong> ${payload.course}</p>
-      <p><strong>Preferred Slot:</strong> ${formattedDate}</p>
-      ${payload.packageType === 'PDF_ONLY' || payload.packageType === 'BUNDLE' ? '<p>Attached is your Question Bank PDF. Good luck with your preparation!</p>' : ''}
+      <div style="font-family: 'Plus Jakarta Sans','Inter',system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; color: #0f172a;">
+        <p>Hi ${payload.name},</p>
+        <p>Thank you for trusting HR Interview Pro. Your booking is confirmed with the following details:</p>
+        <ul>
+          <li><strong>Course / Role:</strong> ${payload.course}</li>
+          <li><strong>Phone:</strong> ${payload.phone}</li>
+          <li><strong>Preferred Slot:</strong> ${formattedDate}</li>
+        </ul>
+        ${buildInvoiceHtml(payload)}
+        <p style="margin-top:12px;">${buildFulfilmentMessage(payload)}</p>
+        <p>If you have any questions, reply to this email and our team will assist you.</p>
+        <p style="margin-top:16px;">Warm regards,<br/>HR Interview Pro</p>
+      </div>
     `
   });
 }
@@ -87,7 +192,6 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
 interface BookingUpdatePayload extends BookingNotificationPayload {
   status: string;
   meetingLink?: string | null;
-  packageType?: string;
 }
 
 export async function sendBookingUpdateNotification(payload: BookingUpdatePayload) {
@@ -105,17 +209,20 @@ export async function sendBookingUpdateNotification(payload: BookingUpdatePayloa
     timeStyle: 'short'
   });
 
+  const attachments = await getPdfAttachment(payload.packageType);
+
   await transporter.sendMail({
     to: recipients.join(', '),
     from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
     subject: `Booking updated – ${payload.name} (${payload.status})`,
-    attachments: getPdfAttachment(payload.packageType),
+    attachments,
     html: `
       <h2>Booking Updated</h2>
       <p><strong>Name:</strong> ${payload.name}</p>
       <p><strong>Status:</strong> ${payload.status}</p>
       <p><strong>Preferred Slot:</strong> ${formattedDate}</p>
-      <p><strong>Meeting Link:</strong> ${payload.meetingLink ? `<a href="${payload.meetingLink}">${payload.meetingLink}</a>` : 'Not set'}</p>
+      <p><strong>Meeting Link:</strong> ${payload.meetingLink ? `<a href="${payload.meetingLink}">${payload.meetingLink}</a>` : 'Not set yet – we will follow up shortly.'}</p>
+      ${buildInvoiceHtml(payload)}
     `
   });
 }

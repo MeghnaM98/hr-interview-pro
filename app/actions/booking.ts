@@ -77,7 +77,7 @@ export async function createBooking(formData: FormData): Promise<ActionResponse>
         ...parsed.data,
         resumePath,
         jdPath,
-        scheduledAt: parsed.data.packageType === 'PDF_ONLY' ? new Date() : parsed.data.scheduledAt,
+        scheduledAt: parsed.data.packageType === 'PDF_ONLY' ? new Date() : (parsed.data.scheduledAt as Date),
         amountPaid: packageConfig.amount,
         status: 'PENDING'
       }

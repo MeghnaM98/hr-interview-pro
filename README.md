@@ -5,7 +5,7 @@ A Next.js 14 App Router platform tailored for students to book personalised HR m
 ## Features
 - **Student experience**: Hero landing page, process/pitch sections, and a Razorpay-powered booking form that saves resumes/JDs into `/data/uploads`.
 - **Payments & verification**: Razorpay order creation, checkout popup, HMAC verification, and persisted payment/order IDs.
-- **Admin console**: Basic-auth protected `/admin` with list + calendar views (react-big-calendar), booking edit dialogs (status, slot, meeting link), file delete buttons, and email alerts for updates.
+- **Admin console**: Basic-auth protected `/admin` with list + calendar views (react-big-calendar), booking edit dialogs (status, slot, meeting link), file delete buttons, question bank PDF uploader, and email alerts for updates.
 - **Infrastructure**: Prisma schema & migrations, Dockerfile/entrypoint tuned for Render (persistent `/data` volume and `prisma migrate deploy` on boot).
 
 ## Tech Stack
@@ -31,6 +31,7 @@ Create `.env` (excluded from git) with:
 ```env
 DATABASE_URL="file:./prisma/dev.db"
 UPLOAD_DIR="./uploads"            # default fallback to /data/uploads in prod
+QUESTION_BANK_PATH="/data/question-bank.pdf"  # optional override for the PDF attachment
 MY_ADMIN_EMAIL="you@example.com"
 ADMIN_PASSWORD="super-secret"
 SMTP_HOST="smtp.mailtrap.io"

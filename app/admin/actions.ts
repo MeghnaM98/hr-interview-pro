@@ -44,23 +44,29 @@ export async function updateBookingAction(formData: FormData): Promise<ActionRes
     }
   });
 
-  await sendBookingUpdateNotification({
-    name: booking.name,
-    email: booking.email,
-    phone: booking.phone,
-    course: booking.course,
-    scheduledAt: booking.scheduledAt,
-    status: booking.status,
-    meetingLink: booking.meetingLink,
-    packageType: booking.packageType
-  }).catch((error) => {
+  let emailError: string | null = null;
+  try {
+    await sendBookingUpdateNotification({
+      bookingId: booking.id,
+      name: booking.name,
+      email: booking.email,
+      phone: booking.phone,
+      course: booking.course,
+      scheduledAt: booking.scheduledAt,
+      status: booking.status,
+      meetingLink: booking.meetingLink,
+      packageType: booking.packageType,
+      amountPaid: booking.amountPaid
+    });
+  } catch (error) {
     console.error('Booking update email failed', error);
-  });
+    emailError = 'Booking saved but email could not be sent. Please verify SMTP credentials.';
+  }
 
   revalidatePath('/admin');
   revalidatePath('/');
 
-  return { success: true, message: 'Booking updated successfully.' };
+  return { success: true, message: emailError ?? 'Booking updated successfully.' };
 }
 
 export async function deleteBookingFile(bookingId: string, fileType: 'resume' | 'jd'): Promise<ActionResponse> {
@@ -106,16 +112,21 @@ export async function resendQuestionBank(bookingId: string): Promise<ActionRespo
 
   try {
     await sendBookingNotification({
+      bookingId: booking.id,
       name: booking.name,
       email: booking.email,
       phone: booking.phone,
       course: booking.course,
       scheduledAt: booking.scheduledAt ?? new Date(),
-      packageType: booking.packageType
+      packageType: booking.packageType,
+      amountPaid: booking.amountPaid
     });
     return { success: true, message: 'Question bank sent successfully.' };
   } catch (error) {
     console.error('Failed to resend question bank', error);
-    return { success: false, message: 'Unable to resend question bank. Try again.' };
+    return {
+      success: false,
+      message: 'Unable to resend question bank. Please check SMTP credentials and try again.'
+    };
   }
 }

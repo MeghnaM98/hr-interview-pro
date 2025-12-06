@@ -61,6 +61,16 @@ export default function MockPaymentPage() {
           </p>
         </div>
 
+        <div className="mt-6 flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
+          <p className="text-sm font-semibold text-slate-700">Scan QR to Pay via UPI</p>
+          <img
+            src="https://upload.wikimedia.org/wikipedia/commons/d/d0/QR_code_for_mobile_English_Wikipedia.svg"
+            alt="Mock UPI QR"
+            className="mt-4 h-40 w-40 rounded-lg border border-slate-200 bg-white p-2"
+          />
+          <p className="mt-2 text-xs text-slate-500">Open any UPI app to scan and pay.</p>
+        </div>
+
         <div className="mt-8 space-y-3">
           <label className="text-sm font-medium text-slate-700">
             Enter One-Time Password (OTP)

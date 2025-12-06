@@ -38,8 +38,7 @@ export async function submitContactMessage(formData: FormData) {
     email,
     phone: 'N/A',
     course: 'Quick Guidance',
-    scheduledAt: new Date(),
-    packageType: 'PDF_ONLY'
+    scheduledAt: new Date()
   }).catch((error) => console.error('Failed to send contact notification', error));
 
   revalidatePath('/admin');

@@ -7,7 +7,9 @@ import {
   deleteMessage,
   toggleTestimonialVisibility,
   deleteTestimonial,
-  createTestimonial
+  createTestimonial,
+  uploadQuestionBankPdf,
+  resendQuestionBank
 } from '@/app/actions/admin';
 import { cn } from '@/lib/utils';
 import { AdminCalendar } from './admin-calendar';
@@ -51,9 +53,28 @@ export type AdminTestimonial = {
   createdAt: string;
 };
 
+export type FinancialReport = {
+  totalRevenue: number;
+  transactions: Array<{
+    id: string;
+    paymentRef: string | null;
+    name: string;
+    email: string;
+    packageType: string;
+    amountPaid: number | null;
+    createdAt: string;
+  }>;
+};
+
+export type QuestionBankInfo = {
+  exists: boolean;
+  size: number | null;
+  updatedAt: string | null;
+};
+
 type FileType = 'resume' | 'jd';
 
-type Tab = 'bookings' | 'messages' | 'testimonials';
+type Tab = 'bookings' | 'messages' | 'testimonials' | 'payments';
 
 const statusBadges: Record<string, string> = {
   PENDING: 'bg-amber-100 text-amber-900',
@@ -71,11 +92,15 @@ const messageBadges: Record<string, string> = {
 export function AdminDashboard({
   bookings,
   messages,
-  testimonials
+  testimonials,
+  financialReport,
+  questionBank
 }: {
   bookings: AdminBooking[];
   messages: AdminMessage[];
   testimonials: AdminTestimonial[];
+  financialReport: FinancialReport;
+  questionBank: QuestionBankInfo;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>('bookings');
   const [subView, setSubView] = useState<'list' | 'calendar'>('list');
@@ -89,6 +114,12 @@ export function AdminDashboard({
   const [showTestimonialDialog, setShowTestimonialDialog] = useState(false);
   const [testimonialForm, setTestimonialForm] = useState({ name: '', role: '', content: '', rating: 5 });
   const [testimonialMessage, setTestimonialMessage] = useState<string | null>(null);
+  const [questionBankMessage, setQuestionBankMessage] = useState<string | null>(null);
+  const [questionBankPending, startQuestionBankTransition] = useTransition();
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<FinancialReport['transactions'][number] | null>(null);
+  const [transactionMessage, setTransactionMessage] = useState<string | null>(null);
+  const [transactionPending, startTransactionTransition] = useTransition();
 
   const sortedBookings = useMemo(() => {
     return [...bookings].sort((a, b) => new Date(b.scheduledAt).getTime() - new Date(a.scheduledAt).getTime());
@@ -152,6 +183,26 @@ export function AdminDashboard({
       if (result.success) {
         setShowTestimonialDialog(false);
         setTestimonialForm({ name: '', role: '', content: '', rating: 5 });
+      }
+    });
+  };
+
+  const handleQuestionBankUpload = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const input = form.elements.namedItem('questionBank') as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) {
+      setQuestionBankMessage('Please choose a PDF file to upload.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('questionBank', file);
+    startQuestionBankTransition(async () => {
+      const result = await uploadQuestionBankPdf(formData);
+      setQuestionBankMessage(result.message);
+      if (result.success) {
+        form.reset();
       }
     });
   };
@@ -292,7 +343,7 @@ export function AdminDashboard({
           Add New Testimonial
         </button>
       </div>
-      {testimonials.length === 0 && <p className="text-sm text-slate-500">No testimonials captured yet.</p>}
+        {testimonials.length === 0 && <p className="text-sm text-slate-500">No testimonials captured yet.</p>}
       <div className="grid gap-4 md:grid-cols-2">
         {testimonials.map((testimonial) => (
           <div key={testimonial.id} className="rounded-3xl border border-slate-200 bg-white p-6 shadow">
@@ -324,6 +375,124 @@ export function AdminDashboard({
     </div>
   );
 
+  const packageBadge = (pkg: string) => {
+    switch (pkg) {
+      case 'BUNDLE':
+        return 'bg-purple-100 text-purple-700';
+      case 'MOCK_INTERVIEW':
+        return 'bg-sky-100 text-sky-700';
+      case 'PDF_ONLY':
+        return 'bg-amber-100 text-amber-700';
+      default:
+        return 'bg-slate-200 text-slate-700';
+    }
+  };
+
+  const renderPayments = () => (
+    <div className="space-y-6">
+      <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-slate-900 shadow">
+        <p className="text-xs uppercase tracking-widest text-emerald-600">Total Revenue</p>
+        <p className="mt-2 text-4xl font-semibold text-emerald-700">₹{financialReport.totalRevenue.toLocaleString('en-IN')}</p>
+        <p className="text-sm text-emerald-700/80">All confirmed bookings</p>
+      </div>
+
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">Question Bank PDF</p>
+            <p className="text-lg font-display text-slate-900">Current download attachment</p>
+          </div>
+          <div className="text-sm text-slate-500">
+            {questionBank.exists ? (
+              <>
+                <span className="font-semibold text-emerald-600">Active</span>
+                {questionBank.updatedAt && (
+                  <span className="block text-xs text-slate-400">
+                    Updated {new Date(questionBank.updatedAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                  </span>
+                )}
+                {typeof questionBank.size === 'number' && (
+                  <span className="block text-xs text-slate-400">Size: {formatFileSize(questionBank.size)}</span>
+                )}
+              </>
+            ) : (
+              <span className="font-semibold text-amber-600">Using fallback sample</span>
+            )}
+          </div>
+        </div>
+        <p className="mt-4 text-sm text-slate-600">
+          Uploading a new PDF saves it to <code>/data/question-bank.pdf</code>. This file is attached automatically to every PDF-only or bundle booking email.
+        </p>
+        <form onSubmit={handleQuestionBankUpload} className="mt-4 flex flex-col gap-3 md:flex-row md:items-center">
+          <input
+            type="file"
+            name="questionBank"
+            accept="application/pdf"
+            className="flex-1 rounded-2xl border border-dashed border-slate-300 px-4 py-3 text-sm"
+          />
+          <button type="submit" disabled={questionBankPending} className="button-primary whitespace-nowrap px-6">
+            {questionBankPending ? 'Uploading…' : 'Upload & Replace'}
+          </button>
+        </form>
+        {questionBankMessage && <p className="mt-2 text-sm text-slate-500">{questionBankMessage}</p>}
+      </div>
+
+      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+        <table className="min-w-full divide-y divide-slate-200 text-sm">
+          <thead className="bg-warm-sand text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <tr>
+              <th className="px-6 py-3">Date</th>
+              <th className="px-6 py-3">Transaction Ref</th>
+              <th className="px-6 py-3">Student</th>
+              <th className="px-6 py-3">Package</th>
+              <th className="px-6 py-3 text-right">Amount</th>
+              <th className="px-6 py-3">Status</th>
+              <th className="px-6 py-3 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 bg-white">
+            {financialReport.transactions.map((txn) => (
+              <tr key={txn.id}>
+                <td className="px-6 py-4 text-slate-600">{new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium' }).format(new Date(txn.createdAt))}</td>
+                <td className="px-6 py-4 font-mono text-xs text-slate-500">{txn.paymentRef ?? `mock-${txn.id.slice(0, 6)}`}</td>
+                <td className="px-6 py-4">
+                  <div className="font-semibold text-slate-900">{txn.name}</div>
+                  <div className="text-xs text-slate-500">{txn.email}</div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={cn('rounded-full px-3 py-1 text-xs font-semibold', packageBadge(txn.packageType))}>{txn.packageType.replace('_', ' ')}</span>
+                </td>
+                <td className="px-6 py-4 text-right font-semibold text-slate-900">₹{(txn.amountPaid ?? 0).toLocaleString('en-IN')}</td>
+                <td className="px-6 py-4">
+                  <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Paid</span>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button
+                    className="button-secondary px-3 py-1 text-xs"
+                    onClick={() => {
+                      setSelectedTransaction(txn);
+                      setTransactionMessage(null);
+                      setTransactionDialogOpen(true);
+                    }}
+                  >
+                    View
+                  </button>
+                </td>
+              </tr>
+            ))}
+            {financialReport.transactions.length === 0 && (
+              <tr>
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-500">
+                  No paid bookings yet.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-warm-slate pb-16">
       <div className="section-shell space-y-6">
@@ -338,7 +507,8 @@ export function AdminDashboard({
               [
                 { id: 'bookings', label: 'Bookings' },
                 { id: 'messages', label: 'Quick Guidance' },
-                { id: 'testimonials', label: 'Testimonials' }
+                { id: 'testimonials', label: 'Testimonials' },
+                { id: 'payments', label: 'Payments' }
               ] as { id: Tab; label: string }[]
             ).map((tab) => (
               <button
@@ -356,9 +526,73 @@ export function AdminDashboard({
         {activeTab === 'bookings' && renderBookings()}
         {activeTab === 'messages' && renderMessages()}
         {activeTab === 'testimonials' && renderTestimonials()}
+        {activeTab === 'payments' && renderPayments()}
       </div>
 
       <BookingDialog booking={selectedBooking} open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      {transactionDialogOpen && selectedTransaction && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/60 px-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-primary">Transaction Details</p>
+                <h3 className="font-display text-2xl">{selectedTransaction.name}</h3>
+                <p className="text-sm text-slate-500">{selectedTransaction.email}</p>
+              </div>
+              <button onClick={() => setTransactionDialogOpen(false)} className="text-slate-500 hover:text-slate-900">
+                ✕
+              </button>
+            </div>
+
+            <dl className="mt-6 space-y-3 text-sm text-slate-600">
+              <div className="flex justify-between">
+                <dt className="font-medium text-slate-800">Package</dt>
+                <dd>
+                  <span className={cn('rounded-full px-3 py-1 text-xs font-semibold', packageBadge(selectedTransaction.packageType))}>
+                    {selectedTransaction.packageType.replace('_', ' ')}
+                  </span>
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="font-medium text-slate-800">Amount</dt>
+                <dd className="font-semibold text-slate-900">₹{(selectedTransaction.amountPaid ?? 0).toLocaleString('en-IN')}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="font-medium text-slate-800">Transaction Ref</dt>
+                <dd className="font-mono text-xs text-slate-500">{selectedTransaction.paymentRef ?? `mock-${selectedTransaction.id.slice(0, 6)}`}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="font-medium text-slate-800">Booked On</dt>
+                <dd>{new Date(selectedTransaction.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</dd>
+              </div>
+            </dl>
+
+            {transactionMessage && (
+              <p className={`mt-4 text-sm ${transactionMessage.includes('success') ? 'text-emerald-600' : 'text-rose-600'}`}>{transactionMessage}</p>
+            )}
+
+            <div className="mt-6 flex justify-end gap-3">
+              {selectedTransaction.packageType === 'PDF_ONLY' && (
+                <button
+                  className="button-secondary inline-flex items-center gap-2 px-4 py-2 text-sm"
+                  disabled={transactionPending}
+                  onClick={() =>
+                    startTransactionTransition(async () => {
+                      const result = await resendQuestionBank(selectedTransaction.id);
+                      setTransactionMessage(result.message);
+                    })
+                  }
+                >
+                  {transactionPending ? 'Sending…' : 'Resend Question Bank PDF'}
+                </button>
+              )}
+              <button className="button-secondary px-4 py-2 text-sm" onClick={() => setTransactionDialogOpen(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showTestimonialDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4">
@@ -440,4 +674,11 @@ function FileBadge({ label, exists, onDelete, disabled }: { label: string; exist
       )}
     </div>
   );
+}
+
+function formatFileSize(bytes?: number | null) {
+  if (!bytes && bytes !== 0) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }

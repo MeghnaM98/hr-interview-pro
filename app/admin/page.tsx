@@ -1,5 +1,8 @@
+import { promises as fs } from 'fs';
 import { prisma } from '@/lib/prisma';
 import { AdminDashboard } from '@/components/admin/admin-dashboard';
+import { getFinancialReport } from '@/app/actions/admin';
+import { getQuestionBankStoragePath } from '@/lib/paths';
 
 const slotFormatter = new Intl.DateTimeFormat('en-IN', {
   dateStyle: 'medium',
@@ -8,11 +11,31 @@ const slotFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 export default async function AdminPage() {
-  const [bookings, messages, testimonials] = await Promise.all([
-    prisma.booking.findMany({ orderBy: { scheduledAt: 'asc' } }),
+  const [bookings, messages, testimonials, financialReport] = await Promise.all([
+    prisma.booking.findMany({
+      where: {
+        packageType: { not: 'PDF_ONLY' }
+      },
+      orderBy: { scheduledAt: 'asc' }
+    }),
     prisma.contactMessage.findMany({ orderBy: { createdAt: 'desc' } }),
-    prisma.testimonial.findMany({ orderBy: { createdAt: 'desc' } })
+    prisma.testimonial.findMany({ orderBy: { createdAt: 'desc' } }),
+    getFinancialReport()
   ]);
+
+  const questionBankPath = getQuestionBankStoragePath();
+  const questionBank = await fs
+    .stat(questionBankPath)
+    .then((stats) => ({
+      exists: true,
+      size: stats.size,
+      updatedAt: stats.mtime.toISOString()
+    }))
+    .catch(() => ({
+      exists: false,
+      size: null,
+      updatedAt: null
+    }));
 
   const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
@@ -48,6 +71,8 @@ export default async function AdminPage() {
       bookings={serializedBookings}
       messages={serializedMessages}
       testimonials={serializedTestimonials}
+      financialReport={financialReport}
+      questionBank={questionBank}
     />
   );
 }
