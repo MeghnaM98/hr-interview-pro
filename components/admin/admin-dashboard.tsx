@@ -22,6 +22,7 @@ export type AdminBooking = {
   status: string;
   packageType: string;
   amountPaid?: number | null;
+  stripeSessionId?: string | null;
   meetingLink?: string | null;
   duration?: number | null;
   resumePath?: string | null;

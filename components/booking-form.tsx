@@ -1,33 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { createPaymentOrder, submitBooking } from '@/app/actions';
+import { useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { createBooking } from '@/app/actions/booking';
 import { cn } from '@/lib/utils';
 
 interface ActionState {
   success: boolean;
   message: string;
-}
-
-type RazorpaySuccessResponse = {
-  razorpay_payment_id: string;
-  razorpay_order_id: string;
-  razorpay_signature: string;
-};
-
-type RazorpayFailureResponse = {
-  error?: {
-    description?: string;
-  };
-};
-
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => {
-      open: () => void;
-      on: (event: string, handler: (response: unknown) => void) => void;
-    };
-  }
 }
 
 const PACKAGES = {
@@ -38,32 +18,10 @@ const PACKAGES = {
 
 export function BookingForm() {
   const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
   const [state, setState] = useState<ActionState>({ success: false, message: '' });
   const [isPending, startTransition] = useTransition();
-  const [scriptReady, setScriptReady] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<keyof typeof PACKAGES>('MOCK_INTERVIEW');
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    if (window.Razorpay) {
-      setScriptReady(true);
-      return;
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => setScriptReady(true);
-    script.onerror = () => setState({ success: false, message: 'Unable to load Razorpay checkout.' });
-    document.body.appendChild(script);
-
-    return () => {
-      script.onload = null;
-    };
-  }, []);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -82,58 +40,14 @@ export function BookingForm() {
     startTransition(async () => {
       try {
         formData.set('packageType', selectedPackage);
-        formData.set('amountPaid', String(PACKAGES[selectedPackage].amount));
 
-        const orderResult = await createPaymentOrder(PACKAGES[selectedPackage].amount);
-        if (!orderResult.success || !orderResult.order) {
-          throw new Error(orderResult.message ?? 'Unable to start payment. Please try again.');
+        const result = await createBooking(formData);
+        if (result.success && result.url) {
+          formEl.reset();
+          router.push(result.url);
+        } else if (!result.success && result.message) {
+          setState({ success: false, message: result.message });
         }
-
-        if (typeof window === 'undefined' || !window.Razorpay) {
-          throw new Error('Payment gateway is not ready. Refresh and try once more.');
-        }
-
-        const options = {
-          key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-          amount: orderResult.order.amount,
-          currency: orderResult.order.currency,
-          name: 'HR Interview Pro',
-          description: PACKAGES[selectedPackage].label,
-          order_id: orderResult.order.id,
-          prefill: {
-            name: String(formData.get('name') ?? ''),
-            email: String(formData.get('email') ?? ''),
-            contact: String(formData.get('phone') ?? '')
-          },
-          theme: {
-            color: '#3b82f6'
-          },
-          modal: {
-            ondismiss: () => {
-              setState({ success: false, message: 'Payment cancelled. Please complete the payment to confirm.' });
-            }
-          },
-          handler: async (response: RazorpaySuccessResponse) => {
-            formData.set('razorpay_payment_id', response.razorpay_payment_id);
-            formData.set('razorpay_order_id', response.razorpay_order_id);
-            formData.set('razorpay_signature', response.razorpay_signature);
-
-            const result = await submitBooking(formData);
-            setState(result);
-            if (result.success) {
-              formEl.reset();
-            }
-          }
-        };
-
-        const rzp = new window.Razorpay(options);
-        rzp.on('payment.failed', (response: RazorpayFailureResponse) => {
-          setState({
-            success: false,
-            message: response?.error?.description ?? 'Payment failed. Please try again or use another method.'
-          });
-        });
-        rzp.open();
       } catch (error) {
         setState({
           success: false,
@@ -226,10 +140,10 @@ export function BookingForm() {
             <input type="datetime-local" name="scheduledAt" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
           </label>
         )}
-        <button type="submit" className="button-primary w-full justify-center" disabled={isPending || !scriptReady}>
-          {isPending ? 'Processing...' : `Pay ₹${PACKAGES[selectedPackage].amount} & Confirm`}
+        <button type="submit" className="button-primary w-full justify-center" disabled={isPending}>
+          {isPending ? 'Processing...' : `Proceed to SecurePay (₹${PACKAGES[selectedPackage].amount})`}
         </button>
-        {!scriptReady && <p className="text-center text-xs text-slate-400">Loading payment gateway…</p>}
+        <p className="text-center text-xs text-slate-400">You’ll be redirected to our secure mock gateway to finalize the payment.</p>
       </form>
     </div>
   );

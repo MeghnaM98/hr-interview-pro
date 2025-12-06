@@ -17,6 +17,7 @@ model Booking {
   jdPath       String?
   paymentId    String?
   orderId      String?
+  stripeSessionId String? @unique
   packageType  String   @default("MOCK_INTERVIEW")
   amountPaid   Int      @default(100)
   meetingLink  String?

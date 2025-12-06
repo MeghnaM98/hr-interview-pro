@@ -1,54 +1,32 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const protectedMatchers = ['/admin', '/api/admin'];
-
-function isProtectedPath(pathname: string) {
-  return protectedMatchers.some((prefix) => pathname.startsWith(prefix));
-}
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  if (!isProtectedPath(pathname)) {
+  if (!request.nextUrl.pathname.startsWith('/admin')) {
     return NextResponse.next();
   }
 
-  const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminPassword) {
-    return new NextResponse('Admin password not configured.', { status: 500 });
-  }
-
-  const cookie = request.cookies.get('admin_auth');
-  if (cookie?.value === 'granted') {
-    return NextResponse.next();
+  if (!ADMIN_USER || !ADMIN_PASSWORD) {
+    return new NextResponse('Unauthorized', { status: 401 });
   }
 
   const authHeader = request.headers.get('authorization');
-  if (authHeader) {
-    const [scheme, encoded] = authHeader.split(' ');
-    if (scheme === 'Basic' && encoded) {
-      const decoded = Buffer.from(encoded, 'base64').toString();
-      const providedPassword = decoded.split(':')[1];
-      if (providedPassword === adminPassword) {
-        const response = NextResponse.next();
-        response.cookies.set('admin_auth', 'granted', {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          maxAge: 60 * 60
-        });
-        return response;
-      }
+  if (authHeader?.startsWith('Basic ')) {
+    const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
+    const [username, password] = credentials.split(':');
+    if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
+      return NextResponse.next();
     }
   }
 
   return new NextResponse('Unauthorized', {
     status: 401,
-    headers: {
-      'WWW-Authenticate': 'Basic realm="HR Interview Pro Admin"'
-    }
+    headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' }
   });
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/api/admin/:path*']
+  matcher: ['/admin/:path*']
 };

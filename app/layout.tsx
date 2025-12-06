@@ -8,15 +8,19 @@ const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta' });
 
 export const metadata: Metadata = {
-  title: 'HR Interview Pro | Mock HR Interviews & JD Feedback',
-  description:
-    'HR Interview Pro delivers personalized HR mock interviews, JD-based feedback, and curated practice question banks to help students ace placements.',
-  metadataBase: new URL('https://hr-interview-pro.example.com'),
+  title: 'HR Interview Pro | Mock Interviews for Students',
+  description: 'Ace your HR round with personalized mock interviews, JD-based feedback, and curated question banks.',
+  keywords: ['HR Interview', 'MBA Placement', 'Mock Interview', 'Resume Review'],
   openGraph: {
-    title: 'HR Interview Pro',
-    description: 'Personalized HR mock interviews for students',
+    title: 'HR Interview Pro | Mock Interviews for Students',
+    description: 'Ace your HR round with personalized mock interviews, JD-based feedback, and curated question banks.',
     type: 'website',
     url: 'https://hr-interview-pro.example.com'
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'HR Interview Pro | Mock Interviews for Students',
+    description: 'Ace your HR round with personalized mock interviews, JD-based feedback, and curated question banks.'
   }
 };
 

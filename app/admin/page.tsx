@@ -25,6 +25,7 @@ export default async function AdminPage() {
     duration: booking.duration,
     resumePath: booking.resumePath,
     jdPath: booking.jdPath,
+    stripeSessionId: booking.stripeSessionId,
     packageType: booking.packageType,
     amountPaid: booking.amountPaid,
     scheduledAt: booking.scheduledAt.toISOString(),
