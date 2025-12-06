@@ -96,8 +96,13 @@ export async function getFinancialReport() {
   return {
     totalRevenue,
     transactions: transactions.map((txn) => ({
-      ...txn,
-      paymentRef: txn.paymentId ?? txn.stripeSessionId ?? `mock-${txn.id.slice(0, 6)}`
+      id: txn.id,
+      paymentRef: txn.paymentId ?? txn.stripeSessionId ?? `mock-${txn.id.slice(0, 6)}`,
+      name: txn.name,
+      email: txn.email,
+      packageType: txn.packageType,
+      amountPaid: txn.amountPaid,
+      createdAt: txn.createdAt.toISOString()
     }))
   };
 }
