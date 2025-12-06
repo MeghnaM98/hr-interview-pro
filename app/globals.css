@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --brand-primary: #3b82f6;
+  --brand-accent: #a78bfa;
+  --brand-teal: #0f766e;
+  --surface-muted: #f8fafc;
+}
+
+body {
+  font-family: var(--font-inter), var(--font-jakarta), 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f8fafc;
+  color: #0f172a;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(59, 130, 246, 0.35);
+  color: #0f172a;
+}
+
+main {
+  position: relative;
+  overflow: hidden;
+}
+
+.section-shell {
+  @apply mx-auto w-full max-w-6xl px-6 py-12 lg:py-20;
+}
+
+.glass-panel {
+  @apply rounded-3xl border border-white/40 bg-white/50 shadow-2xl backdrop-blur;
+}
+
+.fade-divider {
+  @apply h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent;
+}
+
+.button-primary {
+  @apply inline-flex items-center justify-center rounded-full bg-brand-primary px-6 py-3 font-semibold text-white shadow-glow transition hover:-translate-y-0.5 hover:bg-brand-primary/90;
+}
+
+.button-secondary {
+  @apply inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-6 py-3 font-semibold text-brand-primary shadow-sm transition hover:-translate-y-0.5 hover:border-brand-primary/40;
+}
