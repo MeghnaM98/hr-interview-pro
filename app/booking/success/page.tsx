@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 interface SuccessParams {
   searchParams: { bookingId?: string };
 }
