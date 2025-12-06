@@ -17,6 +17,8 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci
 
+RUN mkdir -p /data && chown -R node:node /data
+
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
