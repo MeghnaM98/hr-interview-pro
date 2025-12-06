@@ -13,12 +13,25 @@ export function middleware(request: NextRequest) {
   }
 
   const authHeader = request.headers.get('authorization');
-  if (authHeader?.startsWith('Basic ')) {
-    const credentials = Buffer.from(authHeader.split(' ')[1], 'base64').toString();
-    const [username, password] = credentials.split(':');
-    if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
-      return NextResponse.next();
-    }
+  if (!authHeader || !authHeader.startsWith('Basic ')) {
+    return new NextResponse('Unauthorized', {
+      status: 401,
+      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' }
+    });
+  }
+
+  const encodedCredentials = authHeader.split(' ')[1];
+  if (!encodedCredentials) {
+    return new NextResponse('Unauthorized', {
+      status: 401,
+      headers: { 'WWW-Authenticate': 'Basic realm="Secure Area"' }
+    });
+  }
+
+  const credentials = Buffer.from(encodedCredentials, 'base64').toString();
+  const [username, password] = credentials.split(':');
+  if (username === ADMIN_USER && password === ADMIN_PASSWORD) {
+    return NextResponse.next();
   }
 
   return new NextResponse('Unauthorized', {

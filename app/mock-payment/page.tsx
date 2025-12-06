@@ -1,11 +1,22 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { processMockPayment } from '@/app/actions/payment';
 
 export default function MockPaymentPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <MockPaymentClient />
+    </Suspense>
+  );
+}
+
+function MockPaymentClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const bookingId = searchParams.get('bookingId');
@@ -125,5 +136,16 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
       <span>{label}</span>
       <span className="font-semibold text-slate-900">{value}</span>
     </p>
+  );
+}
+
+function LoadingState() {
+  return (
+    <section className="min-h-screen bg-slate-100 py-16 font-sans">
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-3xl bg-white p-10 text-center shadow-2xl">
+        <Loader2 className="h-10 w-10 animate-spin text-brand-primary" />
+        <p className="text-sm text-slate-600">Loading SecurePay gateway…</p>
+      </div>
+    </section>
   );
 }

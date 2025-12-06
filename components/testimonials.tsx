@@ -1,5 +1,11 @@
 import { prisma } from '@/lib/prisma';
 
+type MinimalTestimonial = {
+  id: string;
+  name: string;
+  content: string;
+};
+
 export async function Testimonials() {
   const testimonials = await prisma.testimonial.findMany({
     where: { isVisible: true },
@@ -22,8 +28,8 @@ export async function Testimonials() {
     }
   ];
 
-  const list = (testimonials.length > 0 ? testimonials : fallback).map((item, index) => ({
-    id: 'id' in item ? item.id : `fallback-${index}`,
+  const list: MinimalTestimonial[] = (testimonials.length > 0 ? testimonials : fallback).map((item, index) => ({
+    id: 'id' in item && typeof item.id === 'string' ? item.id : `fallback-${index}`,
     name: item.name,
     content: item.content
   }));

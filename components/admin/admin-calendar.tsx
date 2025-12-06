@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { Calendar, dateFnsLocalizer, type Event, type View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay, addMinutes } from 'date-fns';
-import enUS from 'date-fns/locale/en-US';
+import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import type { AdminBooking } from './admin-dashboard';
 
