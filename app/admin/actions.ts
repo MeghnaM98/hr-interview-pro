@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { prisma } from '@/lib/prisma';
-import { sendBookingUpdateNotification } from '@/lib/mailer';
+import { sendBookingNotification, sendBookingUpdateNotification } from '@/lib/mailer';
 
 const bookingUpdateSchema = z.object({
   bookingId: z.string().min(1),
@@ -51,7 +51,8 @@ export async function updateBookingAction(formData: FormData): Promise<ActionRes
     course: booking.course,
     scheduledAt: booking.scheduledAt,
     status: booking.status,
-    meetingLink: booking.meetingLink
+    meetingLink: booking.meetingLink,
+    packageType: booking.packageType
   }).catch((error) => {
     console.error('Booking update email failed', error);
   });
@@ -91,4 +92,30 @@ export async function deleteBookingFile(bookingId: string, fileType: 'resume' | 
   revalidatePath('/admin');
 
   return { success: true, message: `${fileType.toUpperCase()} file removed.` };
+}
+
+export async function resendQuestionBank(bookingId: string): Promise<ActionResponse> {
+  const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+  if (!booking) {
+    return { success: false, message: 'Booking not found.' };
+  }
+
+  if (booking.packageType !== 'PDF_ONLY' && booking.packageType !== 'BUNDLE') {
+    return { success: false, message: 'This booking does not include the question bank.' };
+  }
+
+  try {
+    await sendBookingNotification({
+      name: booking.name,
+      email: booking.email,
+      phone: booking.phone,
+      course: booking.course,
+      scheduledAt: booking.scheduledAt ?? new Date(),
+      packageType: booking.packageType
+    });
+    return { success: true, message: 'Question bank sent successfully.' };
+  } catch (error) {
+    console.error('Failed to resend question bank', error);
+    return { success: false, message: 'Unable to resend question bank. Try again.' };
+  }
 }

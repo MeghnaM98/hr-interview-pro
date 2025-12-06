@@ -25,6 +25,8 @@ export default async function AdminPage() {
     duration: booking.duration,
     resumePath: booking.resumePath,
     jdPath: booking.jdPath,
+    packageType: booking.packageType,
+    amountPaid: booking.amountPaid,
     scheduledAt: booking.scheduledAt.toISOString(),
     createdAt: booking.createdAt.toISOString(),
     slotLabel: slotFormatter.format(booking.scheduledAt)

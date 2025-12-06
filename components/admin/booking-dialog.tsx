@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
-import { updateBookingAction } from '@/app/admin/actions';
+import { resendQuestionBank, updateBookingAction } from '@/app/admin/actions';
 import type { AdminBooking } from './admin-dashboard';
+import { Send } from 'lucide-react';
 
 const STATUSES = ['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] as const;
 
@@ -35,6 +36,7 @@ export function BookingDialog({ booking, open, onClose }: Props) {
   });
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isResending, startResendTransition] = useTransition();
 
   useEffect(() => {
     if (booking) {
@@ -80,6 +82,15 @@ export function BookingDialog({ booking, open, onClose }: Props) {
       if (result.success) {
         onClose();
       }
+    });
+  };
+
+  const canResend = booking.packageType === 'PDF_ONLY' || booking.packageType === 'BUNDLE';
+
+  const handleResend = () => {
+    startResendTransition(async () => {
+      const result = await resendQuestionBank(booking.id);
+      setActionMessage(result.message);
     });
   };
 
@@ -158,7 +169,18 @@ export function BookingDialog({ booking, open, onClose }: Props) {
           </p>
         )}
 
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          {canResend && (
+            <button
+              type="button"
+              onClick={handleResend}
+              disabled={isResending}
+              className="inline-flex items-center gap-2 rounded-full border border-brand-primary/30 px-4 py-2 text-sm text-brand-primary transition hover:bg-brand-primary/10"
+            >
+              <Send className="h-4 w-4" />
+              {isResending ? 'Sending…' : 'Resend Question Bank PDF'}
+            </button>
+          )}
           <button onClick={onClose} className="button-secondary px-4 py-2 text-sm">
             Cancel
           </button>

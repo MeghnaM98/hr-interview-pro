@@ -8,7 +8,7 @@ import {
   toggleTestimonialVisibility,
   deleteTestimonial,
   createTestimonial
-} from '@/app/admin/actions';
+} from '@/app/actions/admin';
 import { cn } from '@/lib/utils';
 import { AdminCalendar } from './admin-calendar';
 import { BookingDialog } from './booking-dialog';
@@ -20,6 +20,8 @@ export type AdminBooking = {
   phone: string;
   course: string;
   status: string;
+  packageType: string;
+  amountPaid?: number | null;
   meetingLink?: string | null;
   duration?: number | null;
   resumePath?: string | null;

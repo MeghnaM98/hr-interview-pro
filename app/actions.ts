@@ -13,7 +13,9 @@ const bookingSchema = z.object({
   email: z.string().email('Valid email is required'),
   phone: z.string().min(8, 'Phone number is required'),
   course: z.string().min(2, 'Course is required'),
-  scheduledAt: z.date({ required_error: 'Please select a date and time' })
+  packageType: z.enum(['MOCK_INTERVIEW', 'PDF_ONLY', 'BUNDLE']),
+  amountPaid: z.number().int().min(1),
+  scheduledAt: z.date().optional()
 });
 
 const contactSchema = z.object({
@@ -76,9 +78,9 @@ function extractPaymentFields(formData: FormData) {
   return { paymentId, orderId };
 }
 
-function extractFile(value: FormDataEntryValue | null, label: string) {
+function extractFile(value: FormDataEntryValue | null) {
   if (!value || typeof value === 'string' || typeof (value as Blob).arrayBuffer !== 'function') {
-    throw new Error(`${label} file is required.`);
+    return null;
   }
 
   return value as Blob & { name?: string; size: number };
@@ -86,10 +88,13 @@ function extractFile(value: FormDataEntryValue | null, label: string) {
 
 export async function submitBooking(formData: FormData) {
   try {
+    const packageType = String(formData.get('packageType') ?? 'MOCK_INTERVIEW') as 'MOCK_INTERVIEW' | 'PDF_ONLY' | 'BUNDLE';
+    const amountPaid = Number(formData.get('amountPaid') ?? 100);
+
     const scheduledAtInput = formData.get('scheduledAt');
     const scheduledDate = scheduledAtInput ? new Date(String(scheduledAtInput)) : undefined;
 
-    if (!scheduledDate || Number.isNaN(scheduledDate.getTime())) {
+    if (packageType !== 'PDF_ONLY' && (!scheduledDate || Number.isNaN(scheduledDate.getTime()))) {
       throw new Error('Please choose a valid date and time.');
     }
 
@@ -98,17 +103,23 @@ export async function submitBooking(formData: FormData) {
       email: formData.get('email'),
       phone: formData.get('phone'),
       course: formData.get('course'),
-      scheduledAt: scheduledDate
+      packageType,
+      amountPaid,
+      scheduledAt: packageType === 'PDF_ONLY' ? undefined : scheduledDate
     });
 
     const paymentInfo = extractPaymentFields(formData);
 
-    const resumeFile = extractFile(formData.get('resume'), 'Resume');
-    const jdFile = extractFile(formData.get('jd'), 'JD');
+    const resumeFile = extractFile(formData.get('resume'));
+    const jdFile = extractFile(formData.get('jd'));
+
+    if (packageType !== 'PDF_ONLY' && (!resumeFile || !jdFile)) {
+      throw new Error('Resume and JD are required for mock interview bookings.');
+    }
 
     const [resumePath, jdPath] = await Promise.all([
-      persistUpload(resumeFile, 'resume'),
-      persistUpload(jdFile, 'jd')
+      resumeFile ? persistUpload(resumeFile, 'resume') : Promise.resolve<string | null>(null),
+      jdFile ? persistUpload(jdFile, 'jd') : Promise.resolve<string | null>(null)
     ]);
 
     await prisma.booking.create({
@@ -116,6 +127,7 @@ export async function submitBooking(formData: FormData) {
         ...parsed,
         resumePath,
         jdPath,
+        scheduledAt: parsed.packageType === 'PDF_ONLY' ? new Date() : parsed.scheduledAt,
         paymentId: paymentInfo.paymentId,
         orderId: paymentInfo.orderId
       }
@@ -127,7 +139,10 @@ export async function submitBooking(formData: FormData) {
         email: parsed.email,
         phone: parsed.phone,
         course: parsed.course,
-        scheduledAt: parsed.scheduledAt
+        scheduledAt: parsed.packageType === 'PDF_ONLY'
+          ? new Date()
+          : (parsed.scheduledAt as Date),
+        packageType: parsed.packageType
       });
     } catch (emailError) {
       console.error('Failed to send booking notification email', emailError);

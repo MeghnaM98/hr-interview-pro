@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import path from 'path';
 
 const {
   SMTP_HOST,
@@ -27,14 +28,35 @@ interface BookingNotificationPayload {
   phone: string;
   course: string;
   scheduledAt: Date;
+  packageType?: string;
+}
+
+const pdfPath = path.resolve(process.cwd(), 'resources/hr-interview-question-bank.pdf');
+
+function getPdfAttachment(packageType?: string) {
+  if (!packageType) return [];
+  if (packageType === 'PDF_ONLY' || packageType === 'BUNDLE') {
+    return [
+      {
+        filename: 'HR-Interview-Question-Bank.pdf',
+        path: pdfPath
+      }
+    ];
+  }
+  return [];
 }
 
 export async function sendBookingNotification(payload: BookingNotificationPayload) {
-  if (!MY_ADMIN_EMAIL || !transporter) {
+  if (!transporter) {
     if (process.env.NODE_ENV === 'development') {
-      console.warn('Email notification skipped: Missing MY_ADMIN_EMAIL or SMTP config.');
+      console.warn('Email notification skipped: Missing SMTP config.');
     }
     return;
+  }
+
+  const recipients = [payload.email];
+  if (MY_ADMIN_EMAIL) {
+    recipients.push(MY_ADMIN_EMAIL);
   }
 
   const formattedDate = payload.scheduledAt.toLocaleString('en-IN', {
@@ -45,10 +67,11 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
   const textBody = `New HR Interview booking\n\nName: ${payload.name}\nCourse: ${payload.course}\nPhone: ${payload.phone}\nEmail: ${payload.email}\nScheduled: ${formattedDate}`;
 
   await transporter.sendMail({
-    to: MY_ADMIN_EMAIL,
-    from: SMTP_FROM || MY_ADMIN_EMAIL,
+    to: recipients.join(', '),
+    from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
     subject: `New HR Mock Interview Booking – ${payload.name}`,
     text: textBody,
+    attachments: getPdfAttachment(payload.packageType),
     html: `
       <h2>New Booking</h2>
       <p><strong>Name:</strong> ${payload.name}</p>
@@ -56,6 +79,7 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
       <p><strong>Phone:</strong> ${payload.phone}</p>
       <p><strong>Course:</strong> ${payload.course}</p>
       <p><strong>Preferred Slot:</strong> ${formattedDate}</p>
+      ${payload.packageType === 'PDF_ONLY' || payload.packageType === 'BUNDLE' ? '<p>Attached is your Question Bank PDF. Good luck with your preparation!</p>' : ''}
     `
   });
 }
@@ -63,6 +87,7 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
 interface BookingUpdatePayload extends BookingNotificationPayload {
   status: string;
   meetingLink?: string | null;
+  packageType?: string;
 }
 
 export async function sendBookingUpdateNotification(payload: BookingUpdatePayload) {
@@ -84,6 +109,7 @@ export async function sendBookingUpdateNotification(payload: BookingUpdatePayloa
     to: recipients.join(', '),
     from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
     subject: `Booking updated – ${payload.name} (${payload.status})`,
+    attachments: getPdfAttachment(payload.packageType),
     html: `
       <h2>Booking Updated</h2>
       <p><strong>Name:</strong> ${payload.name}</p>

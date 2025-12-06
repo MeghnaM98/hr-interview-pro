@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { createPaymentOrder, submitBooking } from '@/app/actions';
+import { cn } from '@/lib/utils';
 
 interface ActionState {
   success: boolean;
@@ -29,13 +30,18 @@ declare global {
   }
 }
 
-const INTERVIEW_PRICE = 100;
+const PACKAGES = {
+  MOCK_INTERVIEW: { label: 'Mock Interview Only', amount: 100, badge: 'Standard' },
+  PDF_ONLY: { label: 'Question Bank PDF Only', amount: 50, badge: 'Instant Download' },
+  BUNDLE: { label: 'Ultimate Bundle', amount: 130, badge: 'Best Value - Save ₹20' }
+} as const;
 
 export function BookingForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const [state, setState] = useState<ActionState>({ success: false, message: '' });
   const [isPending, startTransition] = useTransition();
   const [scriptReady, setScriptReady] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<keyof typeof PACKAGES>('MOCK_INTERVIEW');
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -75,7 +81,10 @@ export function BookingForm() {
 
     startTransition(async () => {
       try {
-        const orderResult = await createPaymentOrder(INTERVIEW_PRICE);
+        formData.set('packageType', selectedPackage);
+        formData.set('amountPaid', String(PACKAGES[selectedPackage].amount));
+
+        const orderResult = await createPaymentOrder(PACKAGES[selectedPackage].amount);
         if (!orderResult.success || !orderResult.order) {
           throw new Error(orderResult.message ?? 'Unable to start payment. Please try again.');
         }
@@ -89,7 +98,7 @@ export function BookingForm() {
           amount: orderResult.order.amount,
           currency: orderResult.order.currency,
           name: 'HR Interview Pro',
-          description: 'Mock Interview Charge',
+          description: PACKAGES[selectedPackage].label,
           order_id: orderResult.order.id,
           prefill: {
             name: String(formData.get('name') ?? ''),
@@ -154,6 +163,31 @@ export function BookingForm() {
             {state.message}
           </p>
         )}
+        <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-sm font-semibold text-slate-700">Select your package</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            {(Object.keys(PACKAGES) as Array<keyof typeof PACKAGES>).map((pkgKey) => {
+              const pkg = PACKAGES[pkgKey];
+              const active = selectedPackage === pkgKey;
+              return (
+                <button
+                  key={pkgKey}
+                  type="button"
+                  onClick={() => setSelectedPackage(pkgKey)}
+                  className={cn(
+                    'flex h-full flex-col rounded-2xl border p-3 text-left transition',
+                    active ? 'border-brand-primary bg-brand-primary/5 shadow' : 'border-slate-200 hover:border-brand-primary/50'
+                  )}
+                >
+                  <span className="text-xs font-semibold uppercase tracking-wide text-brand-primary">{pkg.badge}</span>
+                  <span className="mt-1 font-display text-lg text-slate-900">{pkg.label}</span>
+                  <span className="text-sm text-slate-600">₹{pkg.amount}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="grid gap-4 md:grid-cols-2">
           <label className="text-sm font-medium text-slate-700">
             Name
@@ -174,20 +208,26 @@ export function BookingForm() {
             <input type="text" name="course" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
           </label>
         </div>
-        <label className="text-sm font-medium text-slate-700">
-          Resume Upload (PDF)
-          <input type="file" name="resume" accept="application/pdf" required className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
-        </label>
-        <label className="text-sm font-medium text-slate-700">
-          JD Upload (PDF)
-          <input type="file" name="jd" accept="application/pdf" required className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
-        </label>
-        <label className="text-sm font-medium text-slate-700">
-          Preferred Slot
-          <input type="datetime-local" name="scheduledAt" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
-        </label>
+        {selectedPackage !== 'PDF_ONLY' && (
+          <>
+            <label className="text-sm font-medium text-slate-700">
+              Resume Upload (PDF)
+              <input type="file" name="resume" accept="application/pdf" className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              JD Upload (PDF)
+              <input type="file" name="jd" accept="application/pdf" className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
+            </label>
+          </>
+        )}
+        {selectedPackage !== 'PDF_ONLY' && (
+          <label className="text-sm font-medium text-slate-700">
+            Preferred Slot
+            <input type="datetime-local" name="scheduledAt" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
+          </label>
+        )}
         <button type="submit" className="button-primary w-full justify-center" disabled={isPending || !scriptReady}>
-          {isPending ? 'Processing...' : `Pay ₹${INTERVIEW_PRICE} & Confirm`}
+          {isPending ? 'Processing...' : `Pay ₹${PACKAGES[selectedPackage].amount} & Confirm`}
         </button>
         {!scriptReady && <p className="text-center text-xs text-slate-400">Loading payment gateway…</p>}
       </form>

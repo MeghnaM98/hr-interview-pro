@@ -4,6 +4,7 @@
 /uploads
 /prisma/*.db
 /prisma/prisma/*.db
+*.db-journal
 
 # Logs
 npm-debug.log*

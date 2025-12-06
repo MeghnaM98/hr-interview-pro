@@ -17,6 +17,8 @@ model Booking {
   jdPath       String?
   paymentId    String?
   orderId      String?
+  packageType  String   @default("MOCK_INTERVIEW")
+  amountPaid   Int      @default(100)
   meetingLink  String?
   status       String   @default("PENDING")
   duration     Int      @default(45)
