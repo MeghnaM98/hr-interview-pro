@@ -31,7 +31,9 @@ RUN npm ci --omit=dev
 
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
+# Public assets are copied as part of the build output in /.next/static.
+# The base image already contains an empty /app/public directory, so this
+# copy step is not required and fails when the builder stage prunes it.
 COPY --from=builder /app/resources ./resources
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
