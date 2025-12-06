@@ -2,6 +2,8 @@
 /.next
 /.env
 /uploads
+/prisma/*.db
+/prisma/prisma/*.db
 
 # Logs
 npm-debug.log*
