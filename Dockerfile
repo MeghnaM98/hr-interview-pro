@@ -7,6 +7,7 @@ RUN apk add --no-cache libc6-compat openssl bash su-exec
 
 FROM base AS deps
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 RUN npm ci
 
 FROM base AS builder
@@ -19,12 +20,12 @@ ENV NODE_ENV=production
 
 # Install only production dependencies
 COPY package.json package-lock.json* ./
+COPY prisma ./prisma
 RUN npm ci --omit=dev
 
 COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/resources ./resources
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
