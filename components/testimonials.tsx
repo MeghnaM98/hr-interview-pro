@@ -1,19 +1,33 @@
-const testimonials = [
-  {
-    quote: 'The mock interview felt exactly like a real HR round. I knew what to fix before my final panel.',
-    author: 'MBA Student'
-  },
-  {
-    quote: 'The ₹50 question bank was gold. The STAR templates made my answers crisp.',
-    author: 'BBA Student'
-  },
-  {
-    quote: 'Detailed notes on my tone and stories helped me ace my placement within a week.',
-    author: 'BTech Student'
-  }
-];
+import { prisma } from '@/lib/prisma';
 
-export function Testimonials() {
+export async function Testimonials() {
+  const testimonials = await prisma.testimonial.findMany({
+    where: { isVisible: true },
+    orderBy: { createdAt: 'desc' },
+    take: 6
+  });
+
+  const fallback = [
+    {
+      content: 'The mock interview felt exactly like a real HR round. I knew what to fix before my final panel.',
+      name: 'MBA Student'
+    },
+    {
+      content: 'The ₹50 question bank was gold. The STAR templates made my answers crisp.',
+      name: 'BBA Student'
+    },
+    {
+      content: 'Detailed notes on my tone and stories helped me ace my placement within a week.',
+      name: 'BTech Student'
+    }
+  ];
+
+  const list = (testimonials.length > 0 ? testimonials : fallback).map((item, index) => ({
+    id: 'id' in item ? item.id : `fallback-${index}`,
+    name: item.name,
+    content: item.content
+  }));
+
   return (
     <section id="testimonials" className="section-shell">
       <div className="space-y-8">
@@ -23,10 +37,10 @@ export function Testimonials() {
           <p className="mt-3 text-slate-600">Swipe through quick wins from recent cohorts.</p>
         </div>
         <div className="grid gap-6 md:grid-cols-3">
-          {testimonials.map((testimonial) => (
-            <div key={testimonial.author} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
-              <p className="text-lg text-slate-800">“{testimonial.quote}”</p>
-              <p className="mt-4 text-sm font-semibold text-brand-primary">— {testimonial.author}</p>
+          {list.map((testimonial) => (
+            <div key={testimonial.id} className="rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+              <p className="text-lg text-slate-800">“{testimonial.content}”</p>
+              <p className="mt-4 text-sm font-semibold text-brand-primary">— {testimonial.name}</p>
             </div>
           ))}
         </div>

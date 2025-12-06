@@ -152,7 +152,10 @@ export async function submitContact(formData: FormData) {
       message: formData.get('contactMessage')
     });
 
-    await prisma.contact.create({ data: parsed });
+    await Promise.all([
+      prisma.contact.create({ data: parsed }),
+      prisma.contactMessage.create({ data: parsed })
+    ]);
     revalidatePath('/');
 
     return { success: true, message: 'Thanks for reaching out! We will reply shortly.' };

@@ -8,13 +8,13 @@ const slotFormatter = new Intl.DateTimeFormat('en-IN', {
 });
 
 export default async function AdminPage() {
-  const bookings = await prisma.booking.findMany({
-    orderBy: {
-      scheduledAt: 'asc'
-    }
-  });
+  const [bookings, messages, testimonials] = await Promise.all([
+    prisma.booking.findMany({ orderBy: { scheduledAt: 'asc' } }),
+    prisma.contactMessage.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.testimonial.findMany({ orderBy: { createdAt: 'desc' } })
+  ]);
 
-  const serialized = bookings.map((booking) => ({
+  const serializedBookings = bookings.map((booking) => ({
     id: booking.id,
     name: booking.name,
     email: booking.email,
@@ -30,5 +30,21 @@ export default async function AdminPage() {
     slotLabel: slotFormatter.format(booking.scheduledAt)
   }));
 
-  return <AdminDashboard bookings={serialized} />;
+  const serializedMessages = messages.map((message) => ({
+    ...message,
+    createdAt: message.createdAt.toISOString()
+  }));
+
+  const serializedTestimonials = testimonials.map((testimonial) => ({
+    ...testimonial,
+    createdAt: testimonial.createdAt.toISOString()
+  }));
+
+  return (
+    <AdminDashboard
+      bookings={serializedBookings}
+      messages={serializedMessages}
+      testimonials={serializedTestimonials}
+    />
+  );
 }

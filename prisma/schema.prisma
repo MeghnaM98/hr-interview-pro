@@ -31,3 +31,22 @@ model Contact {
   message   String
   createdAt DateTime @default(now())
 }
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  message   String
+  status    String   @default("UNREAD")
+  createdAt DateTime @default(now())
+}
+
+model Testimonial {
+  id        String   @id @default(uuid())
+  name      String
+  role      String
+  content   String
+  rating    Int      @default(5)
+  isVisible Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
