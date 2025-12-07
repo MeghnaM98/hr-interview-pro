@@ -10,7 +10,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG DATABASE_URL="file:/data/dev.db"
 ENV DATABASE_URL=${DATABASE_URL}
 
-RUN apk add --no-cache libc6-compat openssl bash su-exec
+RUN apk add --no-cache libc6-compat openssl bash
 
 FROM base AS deps
 COPY package.json package-lock.json* ./
