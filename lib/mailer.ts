@@ -1,4 +1,5 @@
-import nodemailer from 'nodemailer';
+import nodemailer, { Transporter } from 'nodemailer';
+import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { promises as fs } from 'fs';
 import { getQuestionBankFallbackPath, getQuestionBankFilename, getQuestionBankStoragePath } from './paths';
 
@@ -14,16 +15,20 @@ const {
 
 const hasSmtpConfig = Boolean(SMTP_HOST && SMTP_PORT);
 
-const transporter = hasSmtpConfig
-  ? nodemailer.createTransport({
+type SMTPOptionsWithFamily = SMTPTransport.Options & { family?: number };
+
+const smtpOptions: SMTPOptionsWithFamily | null = hasSmtpConfig
+  ? {
       host: SMTP_HOST,
       port: Number(SMTP_PORT),
       secure: SMTP_SECURE === 'true',
       auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
       // Force IPv4 to prevent timeouts in Docker/Render environments
       family: 4
-    } as any)
+    }
   : null;
+
+const transporter: Transporter | null = smtpOptions ? nodemailer.createTransport(smtpOptions) : null;
 
 const QUESTION_PACKAGES = ['PDF_ONLY', 'BUNDLE'];
 const PACKAGE_LABELS: Record<string, string> = {
