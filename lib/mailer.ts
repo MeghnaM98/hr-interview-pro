@@ -22,7 +22,7 @@ const transporter = hasSmtpConfig
       auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
       // Force IPv4 to prevent timeouts in Docker/Render environments
       family: 4
-    })
+    } as any)
   : null;
 
 const QUESTION_PACKAGES = ['PDF_ONLY', 'BUNDLE'];
