@@ -1,4 +1,4 @@
-import nodemailer, { Transporter } from 'nodemailer';
+import nodemailer, { Transporter, SendMailOptions } from 'nodemailer';
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 import { promises as fs } from 'fs';
 import { getQuestionBankFallbackPath, getQuestionBankFilename, getQuestionBankStoragePath } from './paths';
@@ -24,11 +24,49 @@ const smtpOptions: SMTPOptionsWithFamily | null = hasSmtpConfig
       secure: SMTP_SECURE === 'true',
       auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
       // Force IPv4 to prevent timeouts in Docker/Render environments
-      family: 4
+      family: 4,
+      // Avoid hanging forever on unreachable SMTP hosts
+      connectionTimeout: 10_000,
+      socketTimeout: 10_000
     }
   : null;
 
-const transporter: Transporter | null = smtpOptions ? nodemailer.createTransport(smtpOptions) : null;
+// Fallback to STARTTLS on 587 if the configured port (often 465) is blocked in the host
+const fallbackOptions: SMTPOptionsWithFamily | null =
+  smtpOptions && smtpOptions.port !== 587
+    ? {
+        ...smtpOptions,
+        port: 587,
+        secure: false,
+        requireTLS: true
+      }
+    : null;
+
+const transporters: Transporter[] = [smtpOptions, fallbackOptions]
+  .filter(Boolean)
+  .map((opts) => nodemailer.createTransport(opts as SMTPOptionsWithFamily));
+
+async function sendWithFallback(mailOptions: SendMailOptions) {
+  if (!transporters.length) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Email notification skipped: Missing SMTP config.');
+    }
+    return;
+  }
+
+  let lastError: unknown;
+  for (const transport of transporters) {
+    try {
+      await transport.sendMail(mailOptions);
+      return;
+    } catch (error) {
+      lastError = error;
+      console.error('SMTP send failed on transporter, trying fallback if available', error);
+    }
+  }
+
+  throw lastError ?? new Error('SMTP send failed');
+}
 
 const QUESTION_PACKAGES = ['PDF_ONLY', 'BUNDLE'];
 const PACKAGE_LABELS: Record<string, string> = {
@@ -137,13 +175,6 @@ function buildFulfilmentMessage(payload: BookingNotificationPayload) {
 }
 
 export async function sendBookingNotification(payload: BookingNotificationPayload) {
-  if (!transporter) {
-    if (process.env.NODE_ENV === 'development') {
-      console.warn('Email notification skipped: Missing SMTP config.');
-    }
-    return;
-  }
-
   const recipients = [payload.email];
   if (MY_ADMIN_EMAIL) {
     recipients.push(MY_ADMIN_EMAIL);
@@ -172,7 +203,7 @@ export async function sendBookingNotification(payload: BookingNotificationPayloa
 
   const attachments = await getPdfAttachment(payload.packageType);
 
-  await transporter.sendMail({
+  await sendWithFallback({
     to: recipients.join(', '),
     from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
     subject: `Booking confirmed – ${payload.name}`,
@@ -202,10 +233,6 @@ interface BookingUpdatePayload extends BookingNotificationPayload {
 }
 
 export async function sendBookingUpdateNotification(payload: BookingUpdatePayload) {
-  if (!transporter) {
-    return;
-  }
-
   const recipients = [payload.email];
   if (MY_ADMIN_EMAIL) {
     recipients.unshift(MY_ADMIN_EMAIL);
@@ -218,7 +245,7 @@ export async function sendBookingUpdateNotification(payload: BookingUpdatePayloa
 
   const attachments = await getPdfAttachment(payload.packageType);
 
-  await transporter.sendMail({
+  await sendWithFallback({
     to: recipients.join(', '),
     from: SMTP_FROM || MY_ADMIN_EMAIL || SMTP_USER,
     subject: `Booking updated – ${payload.name} (${payload.status})`,
