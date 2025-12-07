@@ -19,7 +19,9 @@ const transporter = hasSmtpConfig
       host: SMTP_HOST,
       port: Number(SMTP_PORT),
       secure: SMTP_SECURE === 'true',
-      auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined
+      auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+      // Force IPv4 to prevent timeouts in Docker/Render environments
+      family: 4
     })
   : null;
 

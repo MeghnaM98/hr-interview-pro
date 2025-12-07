@@ -23,7 +23,6 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
-RUN chown -R node:node /app/.next
 
 FROM base AS runner
 ENV NODE_ENV=production
@@ -33,19 +32,25 @@ COPY package.json package-lock.json* ./
 COPY prisma ./prisma
 RUN npm ci --omit=dev
 
-COPY --from=builder /app/next.config.js ./next.config.js
-COPY --from=builder /app/.next ./.next
-# Public assets are copied as part of the build output in /.next/static.
-# The base image already contains an empty /app/public directory, so this
-# copy step is not required and fails when the builder stage prunes it.
-COPY --from=builder /app/resources ./resources
+# Ensure the non-root user 'node' owns the application files
+# This fixes the EACCES error by giving the 'node' user write permission
+COPY --from=builder --chown=node:node /app/next.config.js ./next.config.js
+COPY --from=builder --chown=node:node /app/.next ./.next
+COPY --from=builder --chown=node:node /app/resources ./resources
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Prepare the data directory and permissions
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh && \
     mkdir -p /data/uploads && \
-    chown -R node:node /data
+    chown -R node:node /data && \
+    chown -R node:node /app
 
 VOLUME ["/data"]
 EXPOSE 3000
+
+# Switch to non-root user
+USER node
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["npm", "run", "start"]
