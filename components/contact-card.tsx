@@ -31,7 +31,7 @@ export function ContactCard() {
           <SendHorizonal className="h-4 w-4" />
         </div>
         <div>
-          <h3 className="font-display text-2xl text-slate-900">Need quick guidance?</h3>
+      <h3 className="font-display text-2xl text-slate-900">Need quick guidance?</h3>
           <p className="text-sm text-slate-600">Drop a note and we will revert in under 24 hours.</p>
         </div>
       </div>

@@ -59,24 +59,24 @@ export function BookingForm() {
 
   return (
     <div id="booking" className="glass-panel grid gap-8 p-8">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-brand-primary">Booking form</p>
-        <h2 className="mt-3 font-display text-3xl text-slate-900">Reserve your mock HR slot</h2>
-        <p className="mt-4 text-slate-600">
-          Upload your resume and JD so we can customise the interview and feedback. Slots are confirmed within 12 hours.
-        </p>
-        <ul className="mt-6 space-y-3 text-sm text-slate-700">
-          <li>• Mock interview hosted on Google Meet</li>
-          <li>• Feedback summary + next steps in 24 hours</li>
-          <li>• Bundle add-on: get the question bank for ₹50</li>
-        </ul>
-      </div>
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-        {state.message && (
-          <p className={`rounded-2xl px-3 py-2 text-sm ${state.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-            {state.message}
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-brand-primary">Booking form</p>
+          <h2 className="mt-3 font-display text-3xl text-slate-900">Reserve your mock HR slot</h2>
+          <p className="mt-4 text-slate-600">
+            Upload your resume and JD so we can customise the interview and feedback. Slots are confirmed within 12 hours.
           </p>
-        )}
+          <ul className="mt-6 space-y-3 text-sm text-slate-700">
+            <li>• Mock interview hosted on Google Meet</li>
+            <li>• Feedback summary + next steps in 24 hours</li>
+            <li>• Bundle add-on: get the question bank for ₹50</li>
+          </ul>
+        </div>
+      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+          {state.message && (
+            <p className={`rounded-2xl px-3 py-2 text-sm ${state.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+              {state.message}
+            </p>
+          )}
         <div className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-sm font-semibold text-slate-700">Select your package</p>
           <div className="grid gap-3 md:grid-cols-3">
@@ -102,36 +102,36 @@ export function BookingForm() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">
-            Name
-            <input type="text" name="name" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
-          </label>
-          <label className="text-sm font-medium text-slate-700">
-            Email
-            <input type="email" name="email" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
-          </label>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="text-sm font-medium text-slate-700">
-            Phone
-            <input type="tel" name="phone" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
-          </label>
-          <label className="text-sm font-medium text-slate-700">
-            Course
-            <input type="text" name="course" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
-          </label>
-        </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-medium text-slate-700">
+              Name
+              <input type="text" name="name" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Email
+              <input type="email" name="email" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
+            </label>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-medium text-slate-700">
+              Phone
+              <input type="tel" name="phone" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
+            </label>
+            <label className="text-sm font-medium text-slate-700">
+              Course
+              <input type="text" name="course" required className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-4 py-2 shadow-sm focus:border-brand-primary focus:ring-brand-primary" />
+            </label>
+          </div>
         {selectedPackage !== 'PDF_ONLY' && (
           <>
-            <label className="text-sm font-medium text-slate-700">
-              Resume Upload (PDF)
+          <label className="text-sm font-medium text-slate-700">
+            Resume Upload (PDF)
               <input type="file" name="resume" accept="application/pdf" className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              JD Upload (PDF)
+          </label>
+          <label className="text-sm font-medium text-slate-700">
+            JD Upload (PDF)
               <input type="file" name="jd" accept="application/pdf" className="mt-1 w-full rounded-2xl border border-dashed border-brand-primary/40 bg-white px-4 py-3 text-sm" />
-            </label>
+          </label>
           </>
         )}
         {selectedPackage !== 'PDF_ONLY' && (
@@ -144,7 +144,7 @@ export function BookingForm() {
           {isPending ? 'Processing...' : `Proceed to SecurePay (₹${PACKAGES[selectedPackage].amount})`}
         </button>
         <p className="text-center text-xs text-slate-400">You’ll be redirected to our secure mock gateway to finalize the payment.</p>
-      </form>
-    </div>
+        </form>
+      </div>
   );
 }

@@ -209,81 +209,81 @@ export function AdminDashboard({
 
   const renderBookings = () => (
     <>
-      <div className="inline-flex self-start rounded-full border border-slate-200 bg-white p-1 text-sm font-semibold">
-        {(['list', 'calendar'] as const).map((mode) => (
-          <button
-            key={mode}
+          <div className="inline-flex self-start rounded-full border border-slate-200 bg-white p-1 text-sm font-semibold">
+            {(['list', 'calendar'] as const).map((mode) => (
+              <button
+                key={mode}
             className={cn('rounded-full px-4 py-2 transition', subView === mode ? 'bg-brand-primary text-white shadow' : 'text-slate-500')}
             onClick={() => setSubView(mode)}
-          >
-            {mode === 'list' ? 'List View' : 'Calendar View'}
-          </button>
-        ))}
-      </div>
+              >
+                {mode === 'list' ? 'List View' : 'Calendar View'}
+              </button>
+            ))}
+          </div>
 
       {subView === 'list' ? (
-        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-          <table className="min-w-full divide-y divide-slate-200 text-sm">
-            <thead className="bg-warm-sand text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-6 py-3">Date</th>
-                <th className="px-6 py-3">Student</th>
-                <th className="px-6 py-3">Course</th>
-                <th className="px-6 py-3">Phone</th>
-                <th className="px-6 py-3">Status</th>
-                <th className="px-6 py-3">Meeting</th>
-                <th className="px-6 py-3">Files</th>
-                <th className="px-6 py-3">Manage</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {sortedBookings.map((booking) => (
-                <tr key={booking.id} className="hover:bg-warm-sand/60">
+          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <table className="min-w-full divide-y divide-slate-200 text-sm">
+              <thead className="bg-warm-sand text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                <tr>
+                  <th className="px-6 py-3">Date</th>
+                  <th className="px-6 py-3">Student</th>
+                  <th className="px-6 py-3">Course</th>
+                  <th className="px-6 py-3">Phone</th>
+                  <th className="px-6 py-3">Status</th>
+                  <th className="px-6 py-3">Meeting</th>
+                  <th className="px-6 py-3">Files</th>
+                  <th className="px-6 py-3">Manage</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {sortedBookings.map((booking) => (
+                  <tr key={booking.id} className="hover:bg-warm-sand/60">
                   <td className="px-6 py-4 text-slate-600">{booking.slotLabel}</td>
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-slate-900">{booking.name}</div>
-                    <div className="text-xs text-slate-500">{booking.email}</div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600">{booking.course}</td>
-                  <td className="px-6 py-4 text-slate-600">{booking.phone}</td>
-                  <td className="px-6 py-4">
-                    <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusBadges[booking.status] ?? 'bg-slate-200 text-slate-700')}>
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {booking.meetingLink ? (
-                      <a href={booking.meetingLink} target="_blank" rel="noreferrer" className="text-brand-primary underline">
-                        Join link
-                      </a>
-                    ) : (
-                      <span className="text-xs text-slate-400">Not set</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 space-y-2">
+                    <td className="px-6 py-4">
+                      <div className="font-semibold text-slate-900">{booking.name}</div>
+                      <div className="text-xs text-slate-500">{booking.email}</div>
+                    </td>
+                    <td className="px-6 py-4 text-slate-600">{booking.course}</td>
+                    <td className="px-6 py-4 text-slate-600">{booking.phone}</td>
+                    <td className="px-6 py-4">
+                      <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-semibold', statusBadges[booking.status] ?? 'bg-slate-200 text-slate-700')}>
+                        {booking.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {booking.meetingLink ? (
+                        <a href={booking.meetingLink} target="_blank" rel="noreferrer" className="text-brand-primary underline">
+                          Join link
+                        </a>
+                      ) : (
+                        <span className="text-xs text-slate-400">Not set</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 space-y-2">
                     <FileBadge label="Resume" exists={Boolean(booking.resumePath)} onDelete={() => handleDeleteFile(booking.id, 'resume')} disabled={pendingDelete} />
                     <FileBadge label="JD" exists={Boolean(booking.jdPath)} onDelete={() => handleDeleteFile(booking.id, 'jd')} disabled={pendingDelete} />
-                  </td>
-                  <td className="px-6 py-4">
-                    <button className="button-secondary px-3 py-1 text-xs" onClick={() => handleManage(booking)}>
-                      Edit
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {sortedBookings.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
-                    No bookings yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <AdminCalendar bookings={sortedBookings} onSelectBooking={handleManage} />
-      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <button className="button-secondary px-3 py-1 text-xs" onClick={() => handleManage(booking)}>
+                        Edit
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {sortedBookings.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                      No bookings yet.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <AdminCalendar bookings={sortedBookings} onSelectBooking={handleManage} />
+        )}
     </>
   );
 

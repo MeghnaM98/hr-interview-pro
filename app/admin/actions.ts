@@ -46,14 +46,14 @@ export async function updateBookingAction(formData: FormData): Promise<ActionRes
 
   let emailError: string | null = null;
   try {
-    await sendBookingUpdateNotification({
+  await sendBookingUpdateNotification({
       bookingId: booking.id,
-      name: booking.name,
-      email: booking.email,
-      phone: booking.phone,
-      course: booking.course,
-      scheduledAt: booking.scheduledAt,
-      status: booking.status,
+    name: booking.name,
+    email: booking.email,
+    phone: booking.phone,
+    course: booking.course,
+    scheduledAt: booking.scheduledAt,
+    status: booking.status,
       meetingLink: booking.meetingLink,
       packageType: booking.packageType,
       amountPaid: booking.amountPaid
