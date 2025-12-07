@@ -15,7 +15,8 @@ RUN apk add --no-cache libc6-compat openssl bash
 FROM base AS deps
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
-RUN npm ci
+# CHANGED: Use npm install to handle lockfile mismatches
+RUN npm install
 
 RUN mkdir -p /data && chown -R node:node /data
 
@@ -30,7 +31,8 @@ ENV NODE_ENV=production
 # Install only production dependencies
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev
+# CHANGED: Use npm install --omit=dev
+RUN npm install --omit=dev
 
 # Ensure the non-root user 'node' owns the application files
 # This fixes the EACCES error by giving the 'node' user write permission
